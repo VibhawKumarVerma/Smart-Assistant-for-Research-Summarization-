@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Study Buddy - Document AI Assistant</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            padding: 25px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.2em;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            padding: 30px;
+        }
+
+        .upload-section {
+            background: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 25px;
+            transition: all 0.3s ease;
+        }
+
+        .upload-section:hover {
+            border-color: #4CAF50;
+            background: #f0f8f0;
+        }
+
+        .upload-section.drag-over {
+            border-color: #4CAF50;
+            background: #e8f5e8;
+        }
+
+        .upload-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+            color: #6c757d;
+        }
+
+        .upload-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1.1em;
+            margin-top: 15px;
+            transition: background 0.3s ease;
+        }
+
+        .upload-btn:hover {
+            background: #45a049;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .document-status {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            margin-bottom: 25px;
+            border-radius: 5px;
+            display: none;
+        }
+
+        .document-status.active {
+            display: block;
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            background: #f8f9fa;
+            border: none;
+            cursor: pointer;
+            font-size: 1.1em;
+            transition: all 0.3s ease;
+        }
+
+        .tab.active {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+            min-height: 400px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .chat-container {
+            height: 350px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            background: #fafafa;
+            margin-bottom: 15px;
+        }
+
+        .message {
+            margin: 10px 0;
+            padding: 12px 15px;
+            border-radius: 15px;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+
+        .user-message {
+            background: #4CAF50;
+            color: white;
+            margin-left: auto;
+        }
+
+        .ai-message {
+            background: #e3f2fd;
+            color: #333;
+            border: 1px solid #bbdefb;
+        }
+
+        .reference {
+            font-size: 0.9em;
+            background: #fff3e0;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+            border-left: 4px solid #ff9800;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 1px solid #dee2e6;
+            border-radius: 25px;
+            font-size: 1em;
+            outline: none;
+        }
+
+        .chat-input:focus {
+            border-color: #4CAF50;
+            box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+        }
+
+        .send-btn {
+            padding: 12px 20px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .send-btn:hover {
+            background: #45a049;
+        }
+
+        .send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .quiz-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .question-card {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .question-text {
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .option {
+            padding: 10px 15px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .option:hover {
+            border-color: #4CAF50;
+            background: #f0f8f0;
+        }
+
+        .option.selected {
+            border-color: #4CAF50;
+            background: #e8f5e8;
+        }
+
+        .generate-quiz-btn {
+            width: 100%;
+            padding: 15px;
+            background: #2196f3;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.1em;
+            margin-bottom: 20px;
+        }
+
+        .generate-quiz-btn:hover {
+            background: #1976d2;
+        }
+
+        .submit-btn {
+            background: #ff9800;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+
+        .submit-btn:hover {
+            background: #f57c00;
+        }
+
+        .feedback {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+
+        .feedback.correct {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .feedback.incorrect {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #4CAF50;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .quick-actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .quick-btn {
+            padding: 8px 15px;
+            background: #e9ecef;
+            border: 1px solid #dee2e6;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+        }
+
+        .quick-btn:hover {
+            background: #4CAF50;
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+            }
+            
+            .main-content {
+                padding: 20px;
+            }
+            
+            .tabs {
+                flex-direction: column;
+            }
+            
+            .message {
+                max-width: 95%;
+            }
+            
+            .quick-actions {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📚 Study Buddy</h1>
+            <p>Your AI-powered study companion for documents</p>
+        </div>
+
+        <div class="main-content">
+            <div class="upload-section" id="uploadArea">
+                <div class="upload-icon">📄</div>
+                <h3>Upload Your Study Material</h3>
+                <p>Drop a PDF or text file here, or click to browse</p>
+                <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                    Choose File
+                </button>
+                <input type="file" id="fileInput" class="file-input" accept=".pdf,.txt" />
+            </div>
+
+            <div class="document-status" id="documentStatus">
+                <strong>📊 Document Loaded:</strong>
+                <span id="documentName">No document</span>
+                <span id="documentStats"></span>
+            </div>
+
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('ask')">❓ Ask Questions</button>
+                <button class="tab" onclick="switchTab('quiz')">🎯 Practice Quiz</button>
+            </div>
+
+            <div class="tab-content active" id="askTab">
+                <div class="quick-actions">
+                    <button class="quick-btn" onclick="askQuickQuestion('What is the main topic?')">Main Topic</button>
+                    <button class="quick-btn" onclick="askQuickQuestion('Summarize this document')">Summary</button>
+                    <button class="quick-btn" onclick="askQuickQuestion('What are the key points?')">Key Points</button>
+                    <button class="quick-btn" onclick="askQuickQuestion('Explain the conclusion')">Conclusion</button>
+                </div>
+
+                <div class="chat-container" id="chatContainer">
+                    <div class="message ai-message">
+                        <strong>Study Buddy:</strong> Hi! I'm here to help you study. Upload a document and I'll answer questions about it or create practice quizzes for you! 📖
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <input type="text" id="chatInput" class="chat-input" placeholder="Upload a document first..." disabled />
+                    <button id="sendBtn" class="send-btn" disabled>Send</button>
+                </div>
+            </div>
+
+            <div class="tab-content" id="quizTab">
+                <div class="quiz-section">
+                    <button class="generate-quiz-btn" id="generateQuizBtn" onclick="generateQuiz()" disabled>
+                        Generate Practice Question
+                    </button>
+                    <div id="quizContent">
+                        <p style="text-align: center; color: #666; margin-top: 50px;">
+                            Upload a document to start practicing! 📚
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class StudyBuddy {
+            constructor() {
+                this.documentContent = '';
+                this.documentSentences = [];
+                this.currentQuestion = null;
+                this.selectedAnswer = null;
+                
+                this.initializeApp();
+            }
+
+            initializeApp() {
+                // Initialize PDF.js
+                if (typeof pdfjsLib !== 'undefined') {
+                    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                }
+
+                // File upload events
+                const fileInput = document.getElementById('fileInput');
+                const uploadArea = document.getElementById('uploadArea');
+                
+                fileInput.addEventListener('change', (e) => this.handleFileUpload(e.target.files[0]));
+                
+                uploadArea.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    uploadArea.classList.add('drag-over');
+                });
+                
+                uploadArea.addEventListener('dragleave', () => {
+                    uploadArea.classList.remove('drag-over');
+                });
+                
+                uploadArea.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    uploadArea.classList.remove('drag-over');
+                    this.handleFileUpload(e.dataTransfer.files[0]);
+                });
+
+                // Chat events
+                const chatInput = document.getElementById('chatInput');
+                const sendBtn = document.getElementById('sendBtn');
+                
+                chatInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter' && !sendBtn.disabled) {
+                        this.sendMessage();
+                    }
+                });
+                
+                sendBtn.addEventListener('click', () => this.sendMessage());
+            }
+
+            async handleFileUpload(file) {
+                if (!file) return;
+
+                if (!['text/plain', 'application/pdf'].includes(file.type)) {
+                    this.showMessage('Study Buddy', 'Please upload a PDF or text file! 📄', 'ai-message');
+                    return;
+                }
+
+                this.showMessage('Study Buddy', 'Reading your document... 📖', 'ai-message');
+
+                try {
+                    let content = '';
+                    
+                    if (file.type === 'application/pdf') {
+                        content = await this.extractPDFText(file);
+                    } else {
+                        content = await this.extractTextContent(file);
+                    }
+
+                    this.processDocument(content, file);
+                    
+                } catch (error) {
+                    this.showMessage('Study Buddy', 'Oops! Had trouble reading that file. Please try again! 😅', 'ai-message');
+                }
+            }
+
+            async extractPDFText(file) {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+                let text = '';
+                
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const textContent = await page.getTextContent();
+                    const pageText = textContent.items.map(item => item.str).join(' ');
+                    text += pageText + ' ';
+                }
+                
+                return text.trim();
+            }
+
+            async extractTextContent(file) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => resolve(e.target.result);
+                    reader.onerror = reject;
+                    reader.readAsText(file);
+                });
+            }
+
+            processDocument(content, file) {
+                this.documentContent = content;
+                this.documentSentences = content.split(/[.!?]+/).filter(s => s.trim().length > 10);
+                
+                // Update UI
+                const status = document.getElementById('documentStatus');
+                const name = document.getElementById('documentName');
+                const stats = document.getElementById('documentStats');
+                
+                status.classList.add('active');
+                name.textContent = file.name;
+                stats.textContent = ` (${content.split(/\s+/).length} words, ${this.documentSentences.length} sentences)`;
+                
+                // Enable features
+                document.getElementById('chatInput').disabled = false;
+                document.getElementById('sendBtn').disabled = false;
+                document.getElementById('chatInput').placeholder = 'Ask me anything about your document...';
+                document.getElementById('generateQuizBtn').disabled = false;
+                
+                this.showMessage('Study Buddy', 
+                    `Great! I've read your document "${file.name}". Now you can ask me questions or practice with quizzes! 🎉`,
+                    'ai-message'
+                );
+            }
+
+            sendMessage() {
+                const input = document.getElementById('chatInput');
+                const question = input.value.trim();
+                
+                if (!question) return;
+                
+                this.showMessage('You', question, 'user-message');
+                input.value = '';
+                
+                this.answerQuestion(question);
+            }
+
+            async answerQuestion(question) {
+                this.showMessage('Study Buddy', '<div class="loading"></div>', 'ai-message');
+                
+                // Simulate thinking time
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                const answer = this.generateAnswer(question);
+                
+                // Remove loading message
+                const messages = document.querySelectorAll('.message');
+                messages[messages.length - 1].remove();
+                
+                this.showMessage('Study Buddy', answer, 'ai-message');
+            }
+
+            generateAnswer(question) {
+                const questionLower = question.toLowerCase();
+
+                // Generate answer based on question type first
+                let answer = '';
+
+                if (questionLower.includes('summary') || questionLower.includes('summarize')) {
+                    answer = this.generateSummary();
+                } else if (questionLower.includes('main topic') || questionLower.includes('about')) {
+                    answer = this.generateMainTopic();
+                } else if (questionLower.includes('key points') || questionLower.includes('important')) {
+                    answer = this.generateKeyPoints();
+                } else if (questionLower.includes('conclusion') || questionLower.includes('end')) {
+                    answer = this.generateConclusion();
+                } else {
+                    // For general questions, find relevant content
+                    const relevantSentences = this.findRelevantContent(questionLower);
+                    if (relevantSentences.length === 0) {
+                        return "I couldn't find information about that in your document. Try asking about something else, or check if your question relates to the document content! 🤔";
+                    }
+
+                    answer = this.generateDirectAnswer(relevantSentences);
+
+                    // Add reference
+                    const reference = `<div class="reference"><strong>📍 From your document:</strong><br>"${relevantSentences[0].substring(0, 150)}..."</div>`;
+                    return `${answer}${reference}`;
+                }
+
+                return answer;
+            }
+
+
+            findRelevantContent(question) {
+                const keywords = question.split(/\s+/).filter(word => 
+                    word.length > 2 && 
+                    !['what', 'how', 'why', 'when', 'where', 'who', 'the', 'and', 'or', 'but', 'is', 'are', 'this', 'that'].includes(word)
+                );
+                
+                return this.documentSentences
+                    .filter(sentence => {
+                        const sentenceLower = sentence.toLowerCase();
+                        return keywords.some(keyword => sentenceLower.includes(keyword));
+                    })
+                    .sort((a, b) => {
+                        const aScore = keywords.reduce((score, keyword) => 
+                            score + (a.toLowerCase().split(keyword).length - 1), 0);
+                        const bScore = keywords.reduce((score, keyword) => 
+                            score + (b.toLowerCase().split(keyword).length - 1), 0);
+                        return bScore - aScore;
+                    })
+                    .slice(0, 3);
+            }
+
+            generateSummary() {
+                const firstSentences = this.documentSentences.slice(0, 3);
+                return `Here's a summary of your document:\n\n${firstSentences.join(' ')}`;
+            }
+
+            generateMainTopic() {
+                const firstSentence = this.documentSentences[0];
+                return `Based on your document, the main topic appears to be: ${firstSentence}`;
+            }
+
+            generateKeyPoints() {
+                const keyPoints = this.documentSentences.slice(0, 5);
+                return `Here are the key points from your document:\n\n• ${keyPoints.join('\n• ')}`;
+            }
+
+            generateConclusion() {
+                const lastSentences = this.documentSentences.slice(-2);
+                return `The conclusion of your document: ${lastSentences.join(' ')}`;
+            }
+
+            generateDirectAnswer(relevantSentences) {
+                return `Based on your document: ${relevantSentences[0]}`;
+            }
+
+            showMessage(sender, message, className) {
+                const chatContainer = document.getElementById('chatContainer');
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${className}`;
+                messageDiv.innerHTML = `<strong>${sender}:</strong> ${message}`;
+                
+                chatContainer.appendChild(messageDiv);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+        }
+
+        // Global functions
+        function switchTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById(tabName + 'Tab').classList.add('active');
+        }
+
+        function askQuickQuestion(question) {
+            const input = document.getElementById('chatInput');
+            input.value = question;
+            if (!input.disabled) {
+                buddy.sendMessage();
+            }
+        }
+
+        function generateQuiz() {
+            if (!buddy.documentContent) return;
+            
+            const sentence = buddy.documentSentences[Math.floor(Math.random() * buddy.documentSentences.length)];
+            const words = sentence.split(' ').filter(word => word.length > 3);
+            const correctAnswer = words[Math.floor(Math.random() * words.length)].replace(/[^\w]/g, '');
+            
+            const wrongAnswers = ['Option A', 'Option B', 'Option C'];
+            const allOptions = [correctAnswer, ...wrongAnswers].sort(() => Math.random() - 0.5);
+            
+            buddy.currentQuestion = {
+                question: `What word fits in this context from your document?`,
+                sentence: sentence.replace(correctAnswer, '______'),
+                correctAnswer: correctAnswer,
+                options: allOptions
+            };
+            
+            const quizContent = document.getElementById('quizContent');
+            quizContent.innerHTML = `
+                <div class="question-card">
+                    <div class="question-text">${buddy.currentQuestion.question}</div>
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0; font-style: italic;">
+                        "${buddy.currentQuestion.sentence}"
+                    </div>
+                    <div class="options">
+                        ${allOptions.map(option => `
+                            <div class="option" onclick="selectAnswer('${option}')">${option}</div>
+                        `).join('')}
+                    </div>
+                    <button class="submit-btn" onclick="submitAnswer()">Submit Answer</button>
+                    <div id="feedback"></div>
+                </div>
+            `;
+        }
+
+        function selectAnswer(answer) {
+            document.querySelectorAll('.option').forEach(opt => opt.classList.remove('selected'));
+            event.target.classList.add('selected');
+            buddy.selectedAnswer = answer;
+        }
+
+        function submitAnswer() {
+            if (!buddy.selectedAnswer) {
+                alert('Please select an answer first!');
+                return;
+            }
+            
+            const isCorrect = buddy.selectedAnswer === buddy.currentQuestion.correctAnswer;
+            const feedback = document.getElementById('feedback');
+            
+            if (isCorrect) {
+                feedback.innerHTML = '<div class="feedback correct">✅ Correct! Well done!</div>';
+            } else {
+                feedback.innerHTML = `<div class="feedback incorrect">❌ Incorrect. The correct answer is: ${buddy.currentQuestion.correctAnswer}</div>`;
+            }
+            
+            // Disable options
+            document.querySelectorAll('.option').forEach(opt => opt.style.pointerEvents = 'none');
+        }
+
+        // Initialize the app
+        const buddy = new StudyBuddy();
+    </script>
+</body>
+</html>
